@@ -1,7 +1,6 @@
+from lib2to3.pytree import LeafPattern
 import pandas as pd
 from xgboost import XGBRegressor
-
-
 
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import OneHotEncoder
@@ -11,7 +10,6 @@ from sklearn.pipeline import Pipeline
 
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import mean_absolute_error
-
 
 
 train_path = '/data/housing_prices/input/train.csv.gz'
@@ -51,15 +49,40 @@ preprocessor = ColumnTransformer(
         ('cat', categorical_transformer, dummies_cols)
     ])
 
-# Define the model
-model = XGBRegressor(random_state=0, n_estimators=200, learning_rate=0.05)
 
-# Bundle preprocessing and modeling code in a pipeline
-clf = Pipeline(steps=[('preprocessor', preprocessor),
-                      ('model', model)
-                     ])
+def get_score(n_estimators: int) -> float:
+    """Return the average MAE over 3 CV folds of xgboost
+    
+    Keyword argument:
+    n_estimators -- the number of trees in the forest
+    """
+    # Bundle preprocessing and modeling code in a pipeline
+    clf = Pipeline(
+        steps=[('preprocessor', preprocessor),
+               ('model', XGBRegressor(n_estimators=n_estimators, random_state=0, learning_rate=0.01))]
+    )
+    
+    scores = -1 * cross_val_score(clf, train_data, y, cv=3, scoring='neg_mean_absolute_error')
+    
+    return scores.mean()
 
-# Multiply by -1 since sklearn calculates *negative* MAE
-scores = -1 * cross_val_score(clf, train_data, y, cv=5, scoring='neg_mean_absolute_error')
 
-print("Average MAE score:", scores.mean())
+
+# results = {x: get_score(x) for x in range(450, 850, 50)}
+
+# for k, v in results.items():
+#     print(k, v)
+
+# test output
+model = XGBRegressor(n_estimators=800, random_state=0, learning_rate=0.01)
+clf = Pipeline(
+    steps=[('preprocessor', preprocessor),
+            ('model', model)]
+)
+clf.fit(train_data, y)
+preds = clf.predict(test_data)
+
+output = pd.DataFrame({'Id': test_data.index,
+                       'SalePrice': preds})
+output.to_csv('/data/housing_prices/output/submission1.csv', index=False)
+
