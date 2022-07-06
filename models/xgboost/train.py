@@ -37,30 +37,62 @@ def load_data(train_path, test_path, y_col, id_col) -> tuple:
     return x_train, y_train, x_test
 
 
-def load_transformer(x_train: pd.DataFrame) -> ColumnTransformer:
+def trans_missing(x_train: pd.DataFrame) -> ColumnTransformer:
     """
     """
-    # get numeric columns and one-hot columns
-    dummies_cols = [
-        x for x in x_train.columns 
-        if x_train[x].nunique() < 10 and x_train[x].dtype == "object"]
+    none_tran = SimpleImputer(strategy='constant',  fill_val='None')
+    none_cols = [
+        'alley', 'masvnrtype', 'garagetype', 'miscfeature'
+        , 'bsmtqual', 'bsmtcond', 'bsmtexposure', 'bsmtfintype1', 'bsmtfintype2'
+        , 'fireplacequ'
+        , 'garagefinish', 'garagequal', 'garagecond'
+        , 'poolqc'
+        , 'fence'
+    ]
 
-    numeric_cols = [
-        x for x in x_train.columns 
-        if x_train[x].dtype in ['int64', 'float64']]
+    zero_tran = SimpleImputer(strategy='constant',  fill_val=0.0)
+    zero_cols = ['masvnrarea', 'garageyrblt']
 
-    numerical_transformer = SimpleImputer(strategy='median')
+    mode_tran = SimpleImputer(strategy='most_frequent')
+    mode_cols = ['electrical']
 
-    categorical_transformer = Pipeline(steps=[
-        ('imputer', SimpleImputer(strategy='most_frequent')),
-        ('onehot', OneHotEncoder(handle_unknown='ignore'))
-    ])
+    median_tran = SimpleImputer(strategy='most_frequent')
+    median_cols = ['lotfrontage']
 
     return ColumnTransformer(
         transformers=[
-            ('num', numerical_transformer, numeric_cols),
-            ('cat', categorical_transformer, dummies_cols)
+            ('none', none_tran, none_cols)
+            ('zero', zero_tran, zero_cols),
+            ('cat', mode_tran, mode_cols),
+            ('median', median_tran, median_cols)
         ])
+
+
+def trans_prep():
+
+
+
+    # # get numeric columns and one-hot columns
+    # dummies_cols = [
+    #     x for x in x_train.columns 
+    #     if x_train[x].nunique() < 10 and x_train[x].dtype == "object"]
+
+    # numeric_cols = [
+    #     x for x in x_train.columns 
+    #     if x_train[x].dtype in ['int64', 'float64']]
+
+    # numerical_transformer = SimpleImputer(strategy='median')
+
+    # categorical_transformer = Pipeline(steps=[
+    #     ('imputer', SimpleImputer(strategy='most_frequent')),
+    #     ('onehot', OneHotEncoder(handle_unknown='ignore'))
+    # ])
+
+    # return ColumnTransformer(
+    #     transformers=[
+    #         ('num', numerical_transformer, numeric_cols),
+    #         ('cat', categorical_transformer, dummies_cols)
+    #     ])
     
 
 def tune_parameters(x_train, y_train, preprocessor, k_folds=5) -> tuple:
