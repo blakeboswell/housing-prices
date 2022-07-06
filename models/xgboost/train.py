@@ -1,4 +1,4 @@
-
+from shared import load_data
 import pandas as pd
 
 import mlflow
@@ -7,9 +7,10 @@ from mlflow.tracking import MlflowClient
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 
+from sklearn.preprocessing import LabelEncoder
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import OneHotEncoder
-from xgboost import XGBClassifier
+from xgboost import XGBRegressor
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.model_selection import cross_val_score
 
@@ -17,24 +18,6 @@ from sklearn.model_selection import cross_val_score
 train_path = '/data/housing_prices/input/train.csv.gz'
 test_path  = '/data/housing_prices/input/test.csv.gz'
 
-
-def load_data(train_path, test_path, y_col, id_col) -> tuple:
-    """
-    """
-    x_train = (pd.read_csv(train_path)
-        .dropna(subset=y_col)
-        .set_index(id_col)
-    )
-    y_train = x_train[y_col]
-    x_train.drop([y_col], axis=1, inplace=True)
-    x_test = (pd.read_csv(test_path)
-        .set_index(id_col)
-    )
-
-    mlflow.log_artifact(f"{train_path}")
-    mlflow.log_artifact(f"{test_path}")
-
-    return x_train, y_train, x_test
 
 
 def load_transformer(x_train: pd.DataFrame) -> ColumnTransformer:
@@ -63,21 +46,20 @@ def load_transformer(x_train: pd.DataFrame) -> ColumnTransformer:
         ])
     
 
-def tune_parameters(x_train, y_train, preprocessor, k_folds=5) -> tuple:
+def tune_parameters(x_train, y_train, preprocessor, k_folds=2) -> tuple:
     """
     """
-
     params = {
-        'model__min_child_weight': [1], #5, 10],
-        'model__gamma': [0.5], #1, 1.5, 2, 5],
-        'model__subsample': [0.6], #0.8, 1.0],
-        'model__colsample_bytree': [0.6], #0.8, 1.0],
-        'model__max_depth': [3], #4, 5, 8]
+        'model__min_child_weight': [1, 5, 8, 10],
+        'model__gamma': [0.5, 1, 1.5, 2, 5],
+        'model__subsample': [0.4, 0.6, 0.8, 1.0],
+        'model__colsample_bytree': [0.4, 0.6, 0.8, 1.0],
+        'model__max_depth': [3, 4, 5, 8, 10]
     }
 
     pipe = Pipeline(
         steps=[('preprocessor', preprocessor),
-               ('model', XGBClassifier(n_estimators=600))]
+               ('model', XGBRegressor(n_estimators=600, tree_method='gpu_hist', gpu_id=0, random_state=0))]
     )
     
     grid = RandomizedSearchCV(pipe, params, cv=k_folds)
@@ -99,16 +81,16 @@ def tune_parameters(x_train, y_train, preprocessor, k_folds=5) -> tuple:
 def validation(x, y, preprocessor, min_child_weight, gamma, colsample_bytree, max_depth, k_folds=5) -> None:
     """
     """
-    model = XGBClassifier(
-        n_estimators=600, 
+    model = XGBRegressor(
+        n_estimators=600, random_state=0, tree_method='gpu_hist', gpu_id=0,
         min_child_weight=min_child_weight, gamma=gamma, colsample_bytree=colsample_bytree, max_depth=max_depth
     )
     pipe = Pipeline(
         steps=[('preprocessor', preprocessor),
                ('model', model)]
     )
-    kfold_scores = cross_val_score(pipe, x, y, cv=k_folds)  
-    mlflow.log_metric(f"average_accuracy", kfold_scores.mean())
+    kfold_scores = cross_val_score(pipe, x, y, cv=k_folds, scoring='neg_mean_absolute_error')  
+    mlflow.log_metric(f"average_accuracy", -1*kfold_scores.mean())
     mlflow.log_metric(f"std_accuracy", kfold_scores.std())
       
 
@@ -122,10 +104,9 @@ if __name__ == '__main__':
     except:
         experiment_id = client.get_experiment_by_name(data_name).experiment_id
     
-    with mlflow.start_run(experiment_id=experiment_id, run_name='test'):
+    with mlflow.start_run(experiment_id=experiment_id, run_name='experiment-1-gpu'):
         
         x_train, y_train, x_test = load_data(train_path, test_path, 'SalePrice', 'Id')
         preprocessor = load_transformer(x_train)
-
         min_child_weight, gamma, colsample_bytree, max_depth = tune_parameters(x_train, y_train, preprocessor)
         validation(x_train, y_train, preprocessor, min_child_weight, gamma, colsample_bytree, max_depth)
