@@ -1,0 +1,4 @@
+Pipeline(steps=[('preprocessor',
+                 ColumnTransformer(transformers=[('num',
+                                                  SimpleImputer(strategy='median'),
+                                                  ['mssubclass', 'lotfron...

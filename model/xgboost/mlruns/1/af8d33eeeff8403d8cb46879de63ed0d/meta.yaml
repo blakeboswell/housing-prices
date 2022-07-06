@@ -1,0 +1,15 @@
+artifact_uri: file:///home/blake/repos/kaggle/housing_prices/model/xgboost/mlruns/1/af8d33eeeff8403d8cb46879de63ed0d/artifacts
+end_time: 1657083470724
+entry_point_name: ''
+experiment_id: '1'
+lifecycle_stage: deleted
+name: ''
+run_id: af8d33eeeff8403d8cb46879de63ed0d
+run_uuid: af8d33eeeff8403d8cb46879de63ed0d
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1657083470648
+status: 4
+tags: []
+user_id: blake

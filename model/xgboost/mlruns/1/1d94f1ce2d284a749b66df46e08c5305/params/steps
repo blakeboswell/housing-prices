@@ -1,0 +1,4 @@
+[('preprocessor', ColumnTransformer(transformers=[('num', SimpleImputer(strategy='median'),
+                                 ['mssubclass', 'lotfrontage', 'lotarea',
+                                  'overallqual', 'overallcond', 'yearbuilt',
+    ...
