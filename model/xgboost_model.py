@@ -6,7 +6,7 @@ from sklearn.preprocessing import OneHotEncoder
 
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
-
+from sklearn.model_selection import train_test_split
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import mean_absolute_error
 
@@ -15,21 +15,23 @@ train_path = '/data/housing_prices/input/train.csv.gz'
 test_path  = '/data/housing_prices/input/test.csv.gz'
 
 # Read the data
-train_data = pd.read_csv(train_path, index_col='Id')
-test_data = pd.read_csv(test_path, index_col='Id')
+raw_data   = pd.read_csv(train_path, index_col='Id')
+score_data = pd.read_csv(test_path, index_col='Id')
 
 
 # Remove rows with missing target, separate target from predictors
-train_data.dropna(axis=0, subset=['SalePrice'], inplace=True)
-y = train_data['SalePrice']            
-train_data.drop(['SalePrice'], axis=1, inplace=True)
+raw_data.dropna(axis=0, subset=['SalePrice'], inplace=True)
+y = raw_data['SalePrice']
+raw_data.drop(['SalePrice'], axis=1, inplace=True)
+X_train, y_train, X_valid, y_valid = train_test_split(raw_data, y, random_state=0)
+
 
 # get numeric columns and one-hot columns
-dummies_cols = [x for x in train_data.columns 
-                if train_data[x].nunique() < 10 and train_data[x].dtype == "object"]
+dummies_cols = [x for x in X_train.columns 
+                if X_train[x].nunique() < 10 and X_train[x].dtype == "object"]
 
-numeric_cols = [x for x in train_data.columns 
-                if train_data[x].dtype in ['int64', 'float64']]
+numeric_cols = [x for x in X_train.columns 
+                if X_train[x].dtype in ['int64', 'float64']]
 
 
 # Preprocessing for numerical data
@@ -61,7 +63,7 @@ def get_score(n_estimators: int) -> float:
                ('model', XGBRegressor(n_estimators=n_estimators, random_state=0, learning_rate=0.01))]
     )
     
-    scores = -1 * cross_val_score(clf, train_data, y, cv=3, scoring='neg_mean_absolute_error')
+    scores = -1 * cross_val_score(clf, X_train, y, cv=3, scoring='neg_mean_absolute_error')
     
     return scores.mean()
 
@@ -73,15 +75,25 @@ def get_score(n_estimators: int) -> float:
 #     print(k, v)
 
 # test output
-model = XGBRegressor(n_estimators=800, random_state=0, learning_rate=0.01)
+
+min_child_weight = 10
+gamma = 0.5
+colsample_bytree = 0.6
+max_depth = 5
+# learning_rate=0.01,
+
+model = XGBRegressor(
+    n_estimators=600, random_state=0, 
+    min_child_weight=min_child_weight, gamma=gamma, colsample_bytree=colsample_bytree, max_depth=max_depth,
+)
 clf = Pipeline(
     steps=[('preprocessor', preprocessor),
             ('model', model)]
 )
-clf.fit(train_data, y)
+clf.fit(X_train, y)
 preds = clf.predict(test_data)
 
 output = pd.DataFrame({'Id': test_data.index,
                        'SalePrice': preds})
-output.to_csv('/data/housing_prices/output/submission1.csv', index=False)
+output.to_csv('/data/housing_prices/output/submission2.csv', index=False)
 
