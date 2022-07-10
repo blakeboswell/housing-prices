@@ -20,13 +20,6 @@ from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import RandomizedSearchCV
 
 
-
-def rmsle(y, y0):
-    """
-    """
-    return np.sqrt(np.mean(np.square(np.log1p(y) - np.log1p(y0))))
-
-
 def tune_parameters(x_train, y_train, preprocessor, k_folds=5) -> tuple:
     """
     """
@@ -75,7 +68,7 @@ def create_submission(experiment_id, x, best_estimator):
 if __name__ == '__main__':
 
     client = MlflowClient()
-    data_name = 'test'
+    data_name = 'xgboost'
     
     try:
         experiment_id = client.create_experiment(data_name)
