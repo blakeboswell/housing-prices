@@ -1,0 +1,4 @@
+artifact_location: file:///home/blake/repos/kaggle/housing_prices/model/mlruns/2
+experiment_id: '2'
+lifecycle_stage: active
+name: single_xgboost

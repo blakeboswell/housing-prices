@@ -1,0 +1,4 @@
+artifact_location: file:///home/blake/repos/kaggle/housing_prices/model/mlruns/3
+experiment_id: '3'
+lifecycle_stage: active
+name: baseline
